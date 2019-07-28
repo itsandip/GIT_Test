@@ -1,0 +1,500 @@
+cdk gloal
+ssh-keygen -R "sandykmr258@gmail.com"
+ssh-keyscan -t rsa "sandykmr258@gmail.com" >> ~/.ssh/known_hosts
+find running port by port number
+netstat -a -n -o | find "8080"
+to kill running port
+taskkill /F /PID 15776   
+
+************************* DOCKER QUICK START ***************************
+
+1. minikube start
+   minikube status
+2. minikube docker-env
+2. echo $docker_host
+3. docker image pull richardchesterwood/k8s-fleetman-webapp-angular:release0-5
+   -- It will pull image from docker hub to your local
+   -- richardchesterwood/k8s-fleetman-webapp-angular -->Docker hub Repository nae
+   -- release0-5 --> image name
+4. docker container run -p 8080:80 -d richardchesterwood/k8s-fleetman-webapp-angular:release0-5
+   -- The above command run the container if image doesn't exist it will pull from docker hub 
+5.  docker container ls
+	-- To list down all the running container	
+	-- If we access localhost:8080 it will show site can't be reached
+	-- because container is running inside docker deamon in virtual machine
+	-- we can access site using ip address
+	-- use below command to get ip and access the site (ip address may vary computer to computer)
+	http://192.168.99.101:8080/  
+	
+6. minikube ip
+	
+7. docker container stop 44d
+   -- 44d firt three chars of container id
+8. docker container rm 44d
+   -- remove image
+   
+  
+
+*************************** Kubernetes Pods **********************************
+
+1. There is one to one relationship of Pods with container. But one pod can have more than one container.
+
+2. Write a first-pod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp
+spec:
+  containers:
+  - name: webapp
+    image: richardchesterwood/k8s-fleetman-webapp-angular:release0
+  
+3. kubectl apply -f first-pod.yml
+	-- The above command create/deploy a pod to cluster
+	-- here pod is not visible/accesible out side the cluster
+	-- they are only accesible inside the cluste itself
+	-- so there is no way to visit this pod from browser
+	-- Pods have short life time
+	-- Pods regulary die
+	-- Pods are regulary recreated
+	-- Treat pod like cattle not lik pets
+4.  kubectl get all  
+
+5. kubectl describe pod webapp
+   -- If we want to get more information about pod we can use above command
+6. kubectl exec webapp ls
+   -- directory listing of the route of that container 
+7. kubectl exec webapp ls
+   kubectl -it exec webapp sh
+	kubectl exec webapp ls
+	wget http://localhost:80
+	cat index.html
+	exit
+
+
+*************************************************Sevices in Kubernetes *******************************************
+
+-- service is a long runing object in kubernetes
+-- A service will have an ip address and
+-- A service will have an stable, fixed port
+-- we can attach services to pod
+-- with the service we can connect with kubernetes cluster. And find a suitable pod to service the request
+
+1. Create multiple pods and access via service
+
+---------------- PODS Script -----------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleetman-webapp
+
+spec:
+  # This defines which pods are going to be represented by this Service
+  # The service becomes a network endpoint for either other services
+  # or maybe external users to connect to (eg browser)
+  selector:
+    app: webapp
+    release: "0-5"
+
+  ports:
+    - name: http
+      port: 80
+      nodePort: 30080
+
+  type: NodePort
+  
+---------------- Service Script --------------------
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleetman-webapp
+
+spec:
+  # This defines which pods are going to be represented by this Service
+  # The service becomes a network endpoint for either other services
+  # or maybe external users to connect to (eg browser)
+  selector:
+    app: webapp 
+    release: "0-5"    
+
+  ports:
+    - name: http
+      port: 80
+      nodePort: 30080
+
+  type: NodePort
+
+---------------Service script end ----------------- 
+
+kubectl apply -f first-pod.yml
+  
+2. kubectl describe svc fleetman-webapp  
+  -- svc means service
+
+3. kubectl get pods
+
+4. kubectl get po
+
+5. kubectl get po --show-labels
+   -- show labels applied for each pods
+   
+6. kubectl get po --show labels -l release=0
+
+
+*************************************** Deploy ActiveMQ as a Pod and service to Kubernetes **********************
+
+---------- Pod Scripts with additional queue pod ------------------
+pods.yaml
+
+1. 
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp
+  labels:
+    app: webapp
+    release: "0"
+spec:
+  containers:
+  - name: webapp
+    image: richardchesterwood/k8s-fleetman-webapp-angular:release0
+    
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webapp-release-0-5
+  labels:
+    app: webapp
+    release: "0-5"
+spec:
+  containers:
+  - name: webapp
+    image: richardchesterwood/k8s-fleetman-webapp-angular:release0-5
+
+    
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: queue
+  labels:
+    app: queue
+    
+spec:
+  containers:
+  - name: queue
+    image: richardchesterwood/k8s-fleetman-queue:release1
+
+  
+------------ Service Scripts with additional Queue Service -------------
+
+2. services.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleetman-webapp
+
+spec:
+  # This defines which pods are going to be represented by this Service
+  # The service becomes a network endpoint for either other services
+  # or maybe external users to connect to (eg browser)
+  selector:
+    app: webapp 
+    release: "0-5"    
+
+  ports:
+    - name: http
+      port: 80
+      nodePort: 30080
+
+  type: NodePort
+  
+  
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleetman-queue
+
+spec:
+  # This defines which pods are going to be represented by this Service
+  # The service becomes a network endpoint for either other services
+  # or maybe external users to connect to (eg browser)
+  selector:
+    app: queue 
+    
+  ports:
+    - name: http
+      port: 8161
+      nodePort: 30010
+
+  type: NodePort
+  
+3. hit url http://192.168.99.101:30010
+ Click on Manage ActiveMQ broker
+
+ userId - admin
+ password - admin  
+
+************************************************* ReplicatSets ************************************************
+
+-- Pods are very basic and disposable objects in kubernetes
+-- If nodes of the pod fail then all of the pods running on that nodes are going to die
+-- If pod cosumes to many resources such as CPU then kubernetes kill the pod
+
+-- We don't deploy the pod directly because
+-- Once we delete the pod or service dierectly, it won't come back again. And site will be down.
+-- That's the reason we deploy replicaSet instead of Pod
+
+----------------------------- pods.yaml-------------------------------
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: webapp
+spec:
+  selector:
+    matchLabels:
+      app: webapp
+  replicas: 2
+  template: # Template for the pods
+    metadata: 
+      labels:
+        app: webapp
+        
+    spec:    
+      containers:
+      - name: webapp
+        image: richardchesterwood/k8s-fleetman-webapp-angular:release0-5
+    
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: queue
+  labels:
+    app: queue
+    
+spec:
+  containers:
+  - name: queue
+    image: richardchesterwood/k8s-fleetman-queue:release1
+	
+------------------------------------------------------------------------
+
+-----------------------------services.yaml------------------------------
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleetman-webapp
+
+spec:
+  # This defines which pods are going to be represented by this Service
+  # The service becomes a network endpoint for either other services
+  # or maybe external users to connect to (eg browser)
+  selector:
+    app: webapp        
+
+  ports:
+    - name: http
+      port: 80
+      nodePort: 30080
+
+  type: NodePort
+  
+  
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleetman-queue
+
+spec:
+  # This defines which pods are going to be represented by this Service
+  # The service becomes a network endpoint for either other services
+  # or maybe external users to connect to (eg browser)
+  selector:
+    app: queue 
+    
+  ports:
+    - name: http
+      port: 8161
+      nodePort: 30010
+
+  type: NodePort
+  
+----------------------------------------------------------------------------------------
+	
+
+
+1. kubectl delete pod pod_name
+	-- delete the pod
+2. kubectl delete svc service_name
+  -- delete the service
+3.  kubectl delete po --all
+  -- Delete all pods  
+4. kubectl delete rs replicaSet_name  
+
+  
+  
+-- We require additional peace of configuration if we go through the replicaSet. Its tempting to overcomplicate them.
+-- All replicaSet set have extra peace of configuration  
+-- We specify how many instances of this pod do we want kubernetes to make sure are running at any one time.
+-- if a pod were to die for any reason, any reason at all, then kubernetes sping up another one.
+-- If you are deploying a general microservice pod. Once again you would be wrapping it in inside replicaSet. We will keep the replica one for now but
+-- we can use any numer we want in there.
+-- If we write replicaSet, we dont need to write seperate pod defination. Because its combination of replicaSet and Pod defination.
+
+5. kubectl describe replicaset/rs replicaset_name
+-- Describe replicaSet 
+-- When accidently a pod is deleted or crashed ofcourse replicaSet create new pod but ther have been some down time of few seconds in creating new instance.
+-- And site is unobtainable by end user for few seconds that is totally unacceptable
+-- To avoid site down set replicas more than one 1. If one of pod is crashed or deleted then other pods will be keep running.
+  
+
+***************************************** Kubernetes Deploments ************************************************
+
+-- In most of the cases you don't want to work with pods.
+-- As well as replicaSet you might prefer to work with deploments instead.
+-- Kubernetes deploments is most shophisticated form of replicaSet
+-- Its a replicaSet with one additional feature. With a deploment we get automatic rolling updates with zero down time
+-- here we Deploments create replicaSet and pods are created by replicaSet.
+
+--------------------------------pods.yaml---------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+spec:
+  selector:
+    matchLabels:
+      app: webapp
+  replicas: 2
+  template: # Template for the pods
+    metadata: 
+      labels:
+        app: webapp
+        
+    spec:    
+      containers:
+      - name: webapp
+        image: richardchesterwood/k8s-fleetman-webapp-angular:release0
+    
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: queue
+  labels:
+    app: queue
+    
+spec:
+  containers:
+  - name: queue
+    image: richardchesterwood/k8s-fleetman-queue:release1
+	
+--------------------------------------------------------------------------------------
+
+--------------------------------------services.yaml------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleetman-webapp
+
+spec:
+  # This defines which pods are going to be represented by this Service
+  # The service becomes a network endpoint for either other services
+  # or maybe external users to connect to (eg browser)
+  selector:
+    app: webapp        
+
+  ports:
+    - name: http
+      port: 80
+      nodePort: 30080
+
+  type: NodePort
+  
+  
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: fleetman-queue
+
+spec:
+  # This defines which pods are going to be represented by this Service
+  # The service becomes a network endpoint for either other services
+  # or maybe external users to connect to (eg browser)
+  selector: 
+    app: queue 
+   
+  ports:
+    - name: http
+      port: 8161
+      nodePort: 30010
+
+  type: NodePort
+  
+--------------------------------------------------------------------------------	
+
+-- as long as we are working with a different container image, when we make change to the image that is bieng used by deploment and we redeploy the deploment,
+-- then kubernetes start brand new replicaSet and the pod that replicaSet are managing will contain the upated image.
+-- once the pod in new version of replicaSet are responding the request, then effectively the require number of replicas in old replicaSet will be switched to zero. It means all the old pods will be stopped
+-- but all the replicaset will be still there with number of replicas is zero. The significant, if we decide to rollback if something goes wrong with deployment,
+-- then we can resurrect the old versio of replica set by a command.Its quit elegant and simple
+
+
+---------------------------------pods.yaml------------Rolling out
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+spec:
+  minReadySeconds: 30
+  selector:
+    matchLabels:
+      app: webapp
+  replicas: 2
+  template: # Template for the pods
+    metadata: 
+      labels:
+        app: webapp
+        
+    spec:    
+      containers:
+      - name: webapp
+        image: richardchesterwood/k8s-fleetman-webapp-angular:release0-5
+    
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: queue
+  labels:
+    app: queue
+    
+spec:
+  containers:
+  - name: queue
+    image: richardchesterwood/k8s-fleetman-queue:release1
+	
+------------------------------------------------------------------
+
+1.  kubectl rollout status deploy webapp
+2.  kubectl rollout history deploy webapp
+3.  kubectl rollback undo deploy webapp
+	
