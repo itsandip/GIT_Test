@@ -11,6 +11,7 @@ pipeline {
             steps {
                 // Get some code from a GitHub repository
                // git 'https://github.com/thechetantalwar/java-demos.git'
+	       git https://github.com/itsandip/GIT_Test.git
 	       echo "This is multi branch projet"
 
                 // Run Maven on a Unix agent.
@@ -21,6 +22,7 @@ pipeline {
 
                 // To run Maven on a Windows agent, use
                 // bat "mvn -Dmaven.test.failure.ignore=true clean package"
+		sh 'mvn clean package'
             }
 
             post {
