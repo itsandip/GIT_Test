@@ -1,0 +1,29 @@
+pipeline {
+    agent none
+
+    stages {
+        stage('build multi platform') {
+            parallel {
+                stage('build for android'){
+                    agent {
+                        label 'android'
+                    }
+                    steps{
+                        echo "build now for android"
+                    }
+                }
+                stage('build for ios'){
+                    agent {
+                        label 'ios'
+                    }
+                    
+                    steps{
+                        echo " building for ios"
+                    }
+                }
+            }
+            
+        }
+    }
+}
+
