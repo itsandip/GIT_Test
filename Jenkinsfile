@@ -11,6 +11,7 @@ pipeline {
             steps {
                 // Get some code from a GitHub repository
                 //git 'https://github.com/thechetantalwar/java-demos.git'
+		echo "This is multi branch pipelin"
 
                 // Run Maven on a Unix agent.
                 //sh "mvn clean package"
