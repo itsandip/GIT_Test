@@ -14,12 +14,8 @@ pipeline {
 	       echo "This is multi branch projet"
 
                 // Run Maven on a Unix agent.
-                sh "mvn clean package"
-		sh '''
-
-		pwd
+                sh '''pwd
 		ls -ltr
-
 		'''
                 sh "mvn clean package"
                 // To run Maven on a Windows agent, use
