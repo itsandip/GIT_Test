@@ -3,7 +3,7 @@ pipeline {
 
     tools {
         // Install the Maven version configured as "M3" and add it to the path.
-        maven "mvn1"
+        maven "apache-maven-3.8.1"
     }
 
     stages {
@@ -17,7 +17,8 @@ pipeline {
                 sh '''pwd
 		ls -ltr
 		'''
-                sh "clean package"
+		sh 'mvn --version'
+
                 // To run Maven on a Windows agent, use
                 // bat "mvn -Dmaven.test.failure.ignore=true clean package"
             }
